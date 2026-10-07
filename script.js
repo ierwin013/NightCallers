@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'night-callers-dashboard-v1';
 const DATA_FILE_URL = './data.json';
+// Firebase Realtime Database URL (e.g. 'https://your-project-default-rtdb.firebaseio.com/nightcallers').
+// When set, all changes are shared live with everyone viewing the dashboard.
+const SYNC_URL = '';
 const DEFAULT_GOALS = { pulls: 100, contacts: 30, attachments: 15, lender: 12 };
 const DEFAULT_ORIGINATORS = [
   { id: 'paula', name: 'Paula', initials: 'PB', subtitle: '' },
@@ -110,7 +113,55 @@ async function loadState() {
   return normalizeState({});
 }
 
+let lastSynced = '';
+
+function syncPayload() {
+  const { currentDate, ...shared } = state;
+  return JSON.stringify(shared);
+}
+
+function pushRemote() {
+  if (!SYNC_URL) return;
+  const body = syncPayload();
+  if (body === lastSynced) return;
+  lastSynced = body;
+  fetch(`${SYNC_URL}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body })
+    .catch(() => console.warn('Unable to sync dashboard data.'));
+}
+
+async function pullRemote() {
+  try {
+    const response = await fetch(`${SYNC_URL}.json`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const remote = await response.json();
+    if (!remote || typeof remote !== 'object') return null;
+    const next = normalizeState({ ...remote, currentDate: state?.currentDate });
+    return next;
+  } catch {
+    return null;
+  }
+}
+
+function startSync() {
+  if (!SYNC_URL || typeof EventSource === 'undefined') return;
+  const stream = new EventSource(`${SYNC_URL}.json`);
+  const onChange = () => {
+    pullRemote().then((next) => {
+      if (!next) return;
+      const incoming = JSON.stringify((({ currentDate, ...r }) => r)(next));
+      if (incoming === lastSynced) return;
+      lastSynced = incoming;
+      state = next;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+      render();
+    });
+  };
+  stream.addEventListener('put', onChange);
+  stream.addEventListener('patch', onChange);
+}
+
 function saveState() {
+  pushRemote();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
@@ -406,6 +457,13 @@ function changeDate(delta) {
 
 (async () => {
   state = await loadState();
+  if (SYNC_URL) {
+    const remote = await pullRemote();
+    if (remote) state = remote;
+    lastSynced = syncPayload();
+    if (!remote) pushRemote();
+  }
   bindEvents();
   render();
+  startSync();
 })();
