@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0d14" />
+    <title>Night Callers Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <main class="app">
+      <header class="top-header">
+        <div class="title-block">
+          <p class="eyebrow">Team Dashboard</p>
+          <h1><span class="moon" aria-hidden="true">☾</span> Night Callers</h1>
+          <p class="subtitle" id="headerSubtitle"></p>
+        </div>
+        <div class="header-actions">
+          <button id="logEffortBtn" class="primary-btn" type="button">+ Log effort</button>
+        </div>
+      </header>
+
+      <section class="date-nav" aria-label="Date navigation">
+        <button id="prevDayBtn" class="nav-btn" type="button" aria-label="Previous day">&lt;</button>
+        <input id="dateInput" type="date" aria-label="Dashboard date" />
+        <button id="nextDayBtn" class="nav-btn" type="button" aria-label="Next day">&gt;</button>
+      </section>
+
+      <section class="goals-strip card">
+        <div class="goals-strip-head">
+          <p class="eyebrow">Daily Goals</p>
+          <button id="editGoalsBtn" class="ghost-btn" type="button">Edit Goals</button>
+        </div>
+        <div id="goalsList" class="goals-list"></div>
+      </section>
+
+      <section class="stats-grid" id="topStats" aria-label="Daily team statistics"></section>
+
+      <section class="main-grid">
+        <article class="card roster-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Daily Effort</p>
+              <h2>Night Callers Roster</h2>
+            </div>
+            <button id="addOriginatorBtn" class="ghost-btn" type="button">+ Add</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Originator</th>
+                  <th scope="col">Leads Pulled</th>
+                  <th scope="col">Contacts</th>
+                  <th scope="col">Attachments</th>
+                  <th scope="col">Sent to Lender</th>
+                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="rosterBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="main-grid team-records-grid">
+        <article class="card roster-card team-records-card">
+          <div class="card-head">
+            <div>
+              <p class="eyebrow">Milestones</p>
+              <h2>Team Records</h2>
+            </div>
+            <button id="addTeamRecordBtn" class="ghost-btn" type="button">+ Add</button>
+          </div>
+          <div class="table-wrap">
+            <table class="team-records-table">
+              <thead>
+                <tr>
+                  <th scope="col">Originator Name</th>
+                  <th scope="col">Record Broke</th>
+                  <th scope="col">#</th>
+                  <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody id="teamRecordsBody"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <dialog id="originatorDialog" class="modal">
+      <form id="originatorForm">
+        <h3 id="originatorDialogTitle">Add Originator</h3>
+        <label>Name<input name="name" required maxlength="40" /></label>
+        <label>Initials<input name="initials" required maxlength="4" /></label>
+        <label>Subtitle (optional)<input name="subtitle" maxlength="60" /></label>
+        <menu>
+          <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
+          <button class="primary-btn" type="submit">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="goalsDialog" class="modal">
+      <form id="goalsForm">
+        <h3>Edit Goals</h3>
+        <label>Leads Pulled goal<input type="number" min="0" step="1" name="pulls" required /></label>
+        <label>Contacts goal<input type="number" min="0" step="1" name="contacts" required /></label>
+        <label>Attachments goal<input type="number" min="0" step="1" name="attachments" required /></label>
+        <label>Sent to Lender goal<input type="number" min="0" step="1" name="lender" required /></label>
+        <menu>
+          <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
+          <button class="primary-btn" type="submit">Save goals</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="logEffortDialog" class="modal">
+      <form id="logEffortForm">
+        <h3>Log Effort</h3>
+        <label>Originator<select name="originator" id="logEffortOriginator" required></select></label>
+        <div class="grid-two">
+          <label>Leads Pulled<input type="number" min="0" name="pulls" required /></label>
+          <label>Contacts<input type="number" min="0" name="contacts" required /></label>
+          <label>Attachments<input type="number" min="0" name="agents" required /></label>
+          <label>Sent to Lender<input type="number" min="0" name="lender" required /></label>
+        </div>
+        <menu>
+          <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
+          <button class="primary-btn" type="submit">Save effort</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="teamRecordDialog" class="modal">
+      <form id="teamRecordForm">
+        <h3 id="teamRecordDialogTitle">Add Team Record</h3>
+        <label>Originator Name<input name="originatorName" required maxlength="60" /></label>
+        <label>Record Broke<input name="recordBroke" required maxlength="120" /></label>
+        <label>Record #<input type="number" min="0" step="1" name="recordNumber" required /></label>
+        <menu>
+          <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
+          <button class="primary-btn" type="submit">Save record</button>
+        </menu>
+      </form>
+    </dialog>
+  </body>
+</html>
