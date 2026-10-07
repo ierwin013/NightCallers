@@ -2,7 +2,7 @@ const STORAGE_KEY = 'night-callers-dashboard-v1';
 const DATA_FILE_URL = './data.json';
 // Firebase Realtime Database URL (e.g. 'https://your-project-default-rtdb.firebaseio.com/nightcallers').
 // When set, all changes are shared live with everyone viewing the dashboard.
-const SYNC_URL = '';
+const SYNC_URL = 'https://night-callers-dashboard-default-rtdb.firebaseio.com/nightcallers';
 const DEFAULT_GOALS = { pulls: 100, contacts: 30, attachments: 15, lender: 12 };
 const DEFAULT_ORIGINATORS = [
   { id: 'paula', name: 'Paula', initials: 'PB', subtitle: '' },
