@@ -78,7 +78,7 @@ function normalizeState(raw) {
     : DEFAULT_ORIGINATORS;
   const goals = raw?.goals || {};
   return {
-    currentDate: raw?.currentDate || todayISO(),
+    currentDate: todayISO(),
     lastUpdated: raw?.lastUpdated || new Date().toISOString(),
     goals: {
       pulls: clamp(goals.pulls ?? DEFAULT_GOALS.pulls),
