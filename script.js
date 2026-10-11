@@ -24,8 +24,6 @@ const ui = {
   headerSubtitle: document.getElementById('headerSubtitle'),
   dateInput: document.getElementById('dateInput'),
   topStats: document.getElementById('topStats'),
-  goalsSummary: document.getElementById('goalsSummary'),
-  lastUpdated: document.getElementById('lastUpdated'),
   goalsList: document.getElementById('goalsList'),
   rosterBody: document.getElementById('rosterBody'),
   teamRecordsBody: document.getElementById('teamRecordsBody'),
@@ -227,17 +225,6 @@ function goalProgress(currentValue, goalValue) {
   };
 }
 
-function formatDateTime(value) {
-  const date = new Date(value || Date.now());
-  if (Number.isNaN(date.getTime())) return 'just now';
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
-
 function comparisonGoal(metric) {
   switch (metric) {
     case 'contacts':
@@ -261,13 +248,14 @@ function render() {
   })}.`;
   ui.dateInput.value = state.currentDate;
 
-  ui.goalsSummary.textContent = `Team Progress Today · ${GOAL_ORDER.map(({ metric, label, goalKey }) => {
-    const current = totals[metric];
+  ui.goalsList.innerHTML = GOAL_ORDER.map(({ metric, label, goalKey }) => {
     const goal = state.goals[goalKey];
-    const progress = goalProgress(current, goal);
-    return `${label}: ${current}/${goal} (${progress.displayPercent}%)`;
-  }).join(' · ')}`;
-  ui.lastUpdated.textContent = `Last updated ${formatDateTime(state.lastUpdated)}`;
+    return `
+      <section class="goal-item">
+        <h3>${label}</h3>
+        <p class="goal-line"><strong>${goal}</strong> goal</p>
+      </section>`;
+  }).join('');
 
   const stats = [
     ['Average Leads Pulled', values.average.toFixed(1), `${state.originators.length} team members tracked`],
@@ -281,24 +269,6 @@ function render() {
       <p class="stat-value">${value}</p>
       <p class="goal-text">${caption}</p>
     </article>`).join('');
-
-  ui.goalsList.innerHTML = GOAL_ORDER.map(({ metric, label, goalKey }) => {
-    const current = totals[metric];
-    const goal = state.goals[goalKey];
-    const progress = goalProgress(current, goal);
-    return `
-      <section class="goal-item ${progress.tone}">
-        <div class="goal-head-row">
-          <h3>${label}</h3>
-          <span class="goal-percent ${progress.tone}">${progress.displayPercent}%</span>
-        </div>
-        <p class="goal-line"><strong>${current}</strong> / <strong>${goal}</strong></p>
-        <div class="goal-bar" aria-hidden="true">
-          <span class="goal-fill ${progress.tone}" style="width: ${progress.width}%"></span>
-        </div>
-        <p class="goal-meta">${progress.label}</p>
-      </section>`;
-  }).join('');
 
   const metrics = getDateMetrics();
   const showOnlyActive = ui.showActiveToggle?.checked ?? true;
