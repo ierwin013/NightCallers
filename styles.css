@@ -382,6 +382,7 @@ td:last-child {
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
+  min-width: 7.4rem;
 }
 
 .step-btn {
@@ -391,10 +392,12 @@ td:last-child {
   border-radius: 0.4rem;
   color: #d7e7ff;
   background: rgba(129, 163, 214, 0.13);
+  flex-shrink: 0;
 }
 
 .metric-input {
-  width: 3.05rem;
+  width: 4.2rem;
+  min-width: 4.2rem;
   padding: 0.24rem 0.25rem;
   border: 1px solid #2f4367;
   border-radius: 0.5rem;
