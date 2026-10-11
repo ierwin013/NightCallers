@@ -13,11 +13,19 @@ const DEFAULT_ORIGINATORS = [
   { id: 'jared', name: 'Jared', initials: 'JM', subtitle: '' },
   { id: 'ian', name: 'Ian', initials: 'IE', subtitle: '' },
 ];
+const GOAL_ORDER = [
+  { metric: 'pulls', label: 'Leads Pulled', goalKey: 'pulls' },
+  { metric: 'contacts', label: 'Contacts', goalKey: 'contacts' },
+  { metric: 'agents', label: 'Attachments', goalKey: 'attachments' },
+  { metric: 'lender', label: 'Sent to Lender', goalKey: 'lender' },
+];
 
 const ui = {
   headerSubtitle: document.getElementById('headerSubtitle'),
   dateInput: document.getElementById('dateInput'),
   topStats: document.getElementById('topStats'),
+  goalsSummary: document.getElementById('goalsSummary'),
+  lastUpdated: document.getElementById('lastUpdated'),
   goalsList: document.getElementById('goalsList'),
   rosterBody: document.getElementById('rosterBody'),
   teamRecordsBody: document.getElementById('teamRecordsBody'),
@@ -30,6 +38,7 @@ const ui = {
   logEffortForm: document.getElementById('logEffortForm'),
   teamRecordDialog: document.getElementById('teamRecordDialog'),
   teamRecordForm: document.getElementById('teamRecordForm'),
+  showActiveToggle: document.getElementById('showActiveToggle'),
 };
 
 let state;
@@ -71,7 +80,8 @@ function normalizeState(raw) {
     : DEFAULT_ORIGINATORS;
   const goals = raw?.goals || {};
   return {
-    currentDate: todayISO(),
+    currentDate: raw?.currentDate || todayISO(),
+    lastUpdated: raw?.lastUpdated || new Date().toISOString(),
     goals: {
       pulls: clamp(goals.pulls ?? DEFAULT_GOALS.pulls),
       contacts: clamp(goals.contacts ?? DEFAULT_GOALS.contacts),
@@ -120,6 +130,10 @@ function syncPayload() {
   return JSON.stringify(shared);
 }
 
+function touchState() {
+  state.lastUpdated = new Date().toISOString();
+}
+
 function pushRemote() {
   if (!SYNC_URL) return;
   const body = syncPayload();
@@ -161,6 +175,7 @@ function startSync() {
 }
 
 function saveState() {
+  touchState();
   pushRemote();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -196,6 +211,46 @@ function calculate() {
   };
 }
 
+function goalProgress(currentValue, goalValue) {
+  const current = clamp(currentValue);
+  const goal = clamp(goalValue);
+  const percent = goal ? (current / goal) * 100 : current > 0 ? 100 : 0;
+  const tone = percent >= 100 ? 'good' : percent >= 70 ? 'warn' : 'danger';
+  return {
+    current,
+    goal,
+    percent,
+    width: Math.min(100, percent),
+    tone,
+    displayPercent: Math.round(percent),
+    label: percent >= 100 ? 'On track' : percent >= 70 ? 'Close to goal' : 'Below goal',
+  };
+}
+
+function formatDateTime(value) {
+  const date = new Date(value || Date.now());
+  if (Number.isNaN(date.getTime())) return 'just now';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function comparisonGoal(metric) {
+  switch (metric) {
+    case 'contacts':
+      return state.goals.pulls ? (state.goals.contacts / state.goals.pulls) * 100 : 0;
+    case 'agents':
+      return state.goals.contacts ? (state.goals.attachments / state.goals.contacts) * 100 : 0;
+    case 'lender':
+      return state.goals.contacts ? (state.goals.lender / state.goals.contacts) * 100 : 0;
+    default:
+      return 0;
+  }
+}
+
 function render() {
   const { totals, values } = calculate();
   const date = new Date(`${state.currentDate}T12:00:00`);
@@ -206,11 +261,19 @@ function render() {
   })}.`;
   ui.dateInput.value = state.currentDate;
 
+  ui.goalsSummary.textContent = `Team Progress Today · ${GOAL_ORDER.map(({ metric, label, goalKey }) => {
+    const current = totals[metric];
+    const goal = state.goals[goalKey];
+    const progress = goalProgress(current, goal);
+    return `${label}: ${current}/${goal} (${progress.displayPercent}%)`;
+  }).join(' · ')}`;
+  ui.lastUpdated.textContent = `Last updated ${formatDateTime(state.lastUpdated)}`;
+
   const stats = [
     ['Average Leads Pulled', values.average.toFixed(1), `${state.originators.length} team members tracked`],
-    ['Contact to Lead %', `${Math.round(values.contactRate)}%`, 'Contacts compared to leads pulled'],
-    ['Contact to Attachment %', `${Math.round(values.attachmentRate)}%`, 'Attachments compared to contacts'],
-    ['Sent to Lender %', `${Math.round(values.lenderRate)}%`, 'Sent to lender compared to contacts'],
+    ['Contact to Lead %', `${Math.round(values.contactRate)}%`, `vs goal ${Math.round(comparisonGoal('contacts'))}%`],
+    ['Contact to Attachment %', `${Math.round(values.attachmentRate)}%`, `vs goal ${Math.round(comparisonGoal('agents'))}%`],
+    ['Sent to Lender %', `${Math.round(values.lenderRate)}%`, `vs goal ${Math.round(comparisonGoal('lender'))}%`],
   ];
   ui.topStats.innerHTML = stats.map(([title, value, caption]) => `
     <article class="card stat-card">
@@ -219,45 +282,62 @@ function render() {
       <p class="goal-text">${caption}</p>
     </article>`).join('');
 
-  const goals = [
-    ['Leads Pulled', state.goals.pulls],
-    ['Contacts', state.goals.contacts],
-    ['Attachments', state.goals.attachments],
-    ['Sent to Lender', state.goals.lender],
-  ];
-  ui.goalsList.innerHTML = goals.map(([title, goal]) => `
-    <section class="goal-item">
-      <h3>${title}</h3>
-      <p class="goal-line"><strong>${goal}</strong> goal</p>
-    </section>`).join('');
+  ui.goalsList.innerHTML = GOAL_ORDER.map(({ metric, label, goalKey }) => {
+    const current = totals[metric];
+    const goal = state.goals[goalKey];
+    const progress = goalProgress(current, goal);
+    return `
+      <section class="goal-item ${progress.tone}">
+        <div class="goal-head-row">
+          <h3>${label}</h3>
+          <span class="goal-percent ${progress.tone}">${progress.displayPercent}%</span>
+        </div>
+        <p class="goal-line"><strong>${current}</strong> / <strong>${goal}</strong></p>
+        <div class="goal-bar" aria-hidden="true">
+          <span class="goal-fill ${progress.tone}" style="width: ${progress.width}%"></span>
+        </div>
+        <p class="goal-meta">${progress.label}</p>
+      </section>`;
+  }).join('');
 
   const metrics = getDateMetrics();
-  ui.rosterBody.innerHTML = state.originators.map((person, index) => {
-    const personMetrics = metrics[person.id] || emptyMetrics();
-    return `<tr data-index="${index}">
-      <td><div class="originator">
-        <span class="avatar">${escapeHtml(person.initials)}</span>
-        <div><div class="name">${escapeHtml(person.name)}</div>
-          ${person.subtitle ? `<div class="subtitle-mini">${escapeHtml(person.subtitle)}</div>` : ''}
-        </div>
-      </div></td>
-      ${metricCell('pulls', personMetrics.pulls)}
-      ${metricCell('contacts', personMetrics.contacts)}
-      ${metricCell('agents', personMetrics.agents)}
-      ${metricCell('lender', personMetrics.lender)}
-      <td class="actions-cell">
-        <button class="icon-btn" type="button" data-action="edit-originator" aria-label="Edit ${escapeHtml(person.name)}">✎</button>
-        <button class="icon-btn" type="button" data-action="remove-originator" aria-label="Remove ${escapeHtml(person.name)}">✕</button>
-      </td>
-    </tr>`;
-  }).join('') + `<tr class="team-total-row">
-    <td><strong>Team Totals</strong></td>
-    <td><strong>${totals.pulls}</strong></td>
-    <td><strong>${totals.contacts}</strong></td>
-    <td><strong>${totals.agents}</strong></td>
-    <td><strong>${totals.lender}</strong></td>
-    <td></td>
-  </tr>`;
+  const showOnlyActive = ui.showActiveToggle?.checked ?? true;
+  const visibleOriginators = showOnlyActive
+    ? state.originators.filter((person) => {
+        const personMetrics = metrics[person.id] || emptyMetrics();
+        return Object.values(personMetrics).some((value) => clamp(value) > 0);
+      })
+    : state.originators;
+
+  ui.rosterBody.innerHTML = visibleOriginators.length
+    ? visibleOriginators.map((person) => {
+        const personMetrics = metrics[person.id] || emptyMetrics();
+        const rowIndex = state.originators.findIndex((item) => item.id === person.id);
+        return `<tr data-originator-id="${escapeHtml(person.id)}" data-index="${rowIndex}">
+          <td><div class="originator">
+            <span class="avatar">${escapeHtml(person.initials)}</span>
+            <div><div class="name">${escapeHtml(person.name)}</div>
+              ${person.subtitle ? `<div class="subtitle-mini">${escapeHtml(person.subtitle)}</div>` : ''}
+            </div>
+          </div></td>
+          ${metricCell('pulls', personMetrics.pulls)}
+          ${metricCell('contacts', personMetrics.contacts)}
+          ${metricCell('agents', personMetrics.agents)}
+          ${metricCell('lender', personMetrics.lender)}
+          <td class="actions-cell">
+            <button class="icon-btn" type="button" data-action="edit-originator" aria-label="Edit ${escapeHtml(person.name)}">✎</button>
+            <button class="icon-btn" type="button" data-action="remove-originator" aria-label="Remove ${escapeHtml(person.name)}">✕</button>
+          </td>
+        </tr>`;
+      }).join('') + `<tr class="team-total-row">
+        <td><strong>Team Totals</strong></td>
+        <td><strong>${totals.pulls}</strong></td>
+        <td><strong>${totals.contacts}</strong></td>
+        <td><strong>${totals.agents}</strong></td>
+        <td><strong>${totals.lender}</strong></td>
+        <td></td>
+      </tr>`
+    : '<tr><td colspan="6" class="empty-row">No active originators for this date.</td></tr>';
 
   ui.teamRecordsBody.innerHTML = state.teamRecords.length
     ? state.teamRecords.map((record, index) => `<tr data-index="${index}">
@@ -274,15 +354,30 @@ function render() {
   ui.logEffortOriginator.innerHTML = state.originators
     .map((person) => `<option value="${escapeHtml(person.id)}">${escapeHtml(person.name)}</option>`)
     .join('');
+
+  const selectedOriginator = ui.logEffortOriginator.value || state.originators[0]?.id || '';
+  if (selectedOriginator) ui.logEffortOriginator.value = selectedOriginator;
 }
 
 function metricCell(metric, value) {
-  return `<td><div class="stepper">
-    <button type="button" class="step-btn" data-metric="${metric}" data-delta="-1" aria-label="Decrease ${metric}">−</button>
-    <input class="metric-input" type="number" min="0" step="1" inputmode="numeric"
-      data-metric="${metric}" value="${clamp(value)}" aria-label="${metric}" />
-    <button type="button" class="step-btn" data-metric="${metric}" data-delta="1" aria-label="Increase ${metric}">+</button>
-  </div></td>`;
+  const goalKey = metric === 'agents' ? 'attachments' : metric;
+  const goal = state.goals[goalKey] || 0;
+  const progress = goalProgress(value, goal);
+  return `<td class="metric-cell">
+    <div class="metric-readout">${clamp(value)}</div>
+    <div class="stepper">
+      <button type="button" class="step-btn" data-metric="${metric}" data-delta="-1" aria-label="Decrease ${metric}">−</button>
+      <input class="metric-input" type="number" min="0" step="1" inputmode="numeric"
+        data-metric="${metric}" value="${clamp(value)}" aria-label="${metric}" />
+      <button type="button" class="step-btn" data-metric="${metric}" data-delta="1" aria-label="Increase ${metric}">+</button>
+    </div>
+    <div class="metric-visual">
+      <div class="metric-progress ${progress.tone}" aria-hidden="true">
+        <span style="width: ${progress.width}%"></span>
+      </div>
+      <div class="metric-meta ${progress.tone}">${progress.displayPercent}%</div>
+    </div>
+  </td>`;
 }
 
 function updateMetric(personId, metric, value) {
@@ -302,6 +397,7 @@ function bindEvents() {
     saveState();
     render();
   });
+  if (ui.showActiveToggle) ui.showActiveToggle.addEventListener('change', render);
   document.getElementById('addOriginatorBtn').addEventListener('click', () => {
     editOriginatorId = null;
     ui.originatorForm.reset();
@@ -324,7 +420,8 @@ function bindEvents() {
     const button = event.target.closest('button');
     if (!button) return;
     const row = button.closest('tr');
-    const person = state.originators[Number(row?.dataset.index)];
+    const personId = row?.dataset.originatorId;
+    const person = state.originators.find((item) => item.id === personId);
     if (!person) return;
     if (button.dataset.metric) {
       const metric = button.dataset.metric;
@@ -346,7 +443,8 @@ function bindEvents() {
   });
   ui.rosterBody.addEventListener('change', (event) => {
     if (!event.target.matches('input[data-metric]')) return;
-    const person = state.originators[Number(event.target.closest('tr')?.dataset.index)];
+    const personId = event.target.closest('tr')?.dataset.originatorId;
+    const person = state.originators.find((item) => item.id === personId);
     if (person) updateMetric(person.id, event.target.dataset.metric, event.target.value);
   });
 
@@ -457,6 +555,7 @@ function changeDate(delta) {
 
 (async () => {
   state = await loadState();
+  if (ui.showActiveToggle) ui.showActiveToggle.checked = true;
   if (SYNC_URL) {
     const remote = await pullRemote();
     if (remote) state = remote;
