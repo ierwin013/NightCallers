@@ -29,15 +29,23 @@
 
       <section class="date-nav" aria-label="Date navigation">
         <button id="prevDayBtn" class="nav-btn" type="button" aria-label="Previous day">&lt;</button>
-        <input id="dateInput" type="date" aria-label="Dashboard date" />
+        <input id="dateInput" name="date" type="date" aria-label="Dashboard date" />
         <button id="nextDayBtn" class="nav-btn" type="button" aria-label="Next day">&gt;</button>
       </section>
 
       <section class="goals-strip card">
         <div class="goals-strip-head">
           <p class="eyebrow">Daily Goals</p>
-          <button id="editGoalsBtn" class="ghost-btn" type="button">Edit Goals</button>
+          <div class="goals-controls">
+            <label class="toggle-control" for="showActiveToggle">
+              <input id="showActiveToggle" type="checkbox" checked />
+              <span>Show only active</span>
+            </label>
+            <button id="editGoalsBtn" class="ghost-btn" type="button">Edit Goals</button>
+          </div>
         </div>
+        <div id="goalsSummary" class="goals-summary" aria-live="polite"></div>
+        <div id="lastUpdated" class="last-updated" aria-live="polite"></div>
         <div id="goalsList" class="goals-list"></div>
       </section>
 
@@ -99,9 +107,12 @@
     <dialog id="originatorDialog" class="modal">
       <form id="originatorForm">
         <h3 id="originatorDialogTitle">Add Originator</h3>
-        <label>Name<input name="name" required maxlength="40" /></label>
-        <label>Initials<input name="initials" required maxlength="4" /></label>
-        <label>Subtitle (optional)<input name="subtitle" maxlength="60" /></label>
+        <label for="originatorNameInput">Name</label>
+        <input id="originatorNameInput" name="name" required maxlength="40" />
+        <label for="originatorInitialsInput">Initials</label>
+        <input id="originatorInitialsInput" name="initials" required maxlength="4" />
+        <label for="originatorSubtitleInput">Subtitle (optional)</label>
+        <input id="originatorSubtitleInput" name="subtitle" maxlength="60" />
         <menu>
           <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
           <button class="primary-btn" type="submit">Save</button>
@@ -112,10 +123,14 @@
     <dialog id="goalsDialog" class="modal">
       <form id="goalsForm">
         <h3>Edit Goals</h3>
-        <label>Leads Pulled goal<input type="number" min="0" step="1" name="pulls" required /></label>
-        <label>Contacts goal<input type="number" min="0" step="1" name="contacts" required /></label>
-        <label>Attachments goal<input type="number" min="0" step="1" name="attachments" required /></label>
-        <label>Sent to Lender goal<input type="number" min="0" step="1" name="lender" required /></label>
+        <label for="goalPullsInput">Leads Pulled goal</label>
+        <input id="goalPullsInput" type="number" min="0" step="1" name="pulls" required />
+        <label for="goalContactsInput">Contacts goal</label>
+        <input id="goalContactsInput" type="number" min="0" step="1" name="contacts" required />
+        <label for="goalAttachmentsInput">Attachments goal</label>
+        <input id="goalAttachmentsInput" type="number" min="0" step="1" name="attachments" required />
+        <label for="goalLenderInput">Sent to Lender goal</label>
+        <input id="goalLenderInput" type="number" min="0" step="1" name="lender" required />
         <menu>
           <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
           <button class="primary-btn" type="submit">Save goals</button>
@@ -126,12 +141,17 @@
     <dialog id="logEffortDialog" class="modal">
       <form id="logEffortForm">
         <h3>Log Effort</h3>
-        <label>Originator<select name="originator" id="logEffortOriginator" required></select></label>
+        <label for="logEffortOriginator">Originator</label>
+        <select id="logEffortOriginator" name="originator" required></select>
         <div class="grid-two">
-          <label>Leads Pulled<input type="number" min="0" name="pulls" required /></label>
-          <label>Contacts<input type="number" min="0" name="contacts" required /></label>
-          <label>Attachments<input type="number" min="0" name="agents" required /></label>
-          <label>Sent to Lender<input type="number" min="0" name="lender" required /></label>
+          <label for="logEffortPulls">Leads Pulled</label>
+          <input id="logEffortPulls" type="number" min="0" name="pulls" required />
+          <label for="logEffortContacts">Contacts</label>
+          <input id="logEffortContacts" type="number" min="0" name="contacts" required />
+          <label for="logEffortAgents">Attachments</label>
+          <input id="logEffortAgents" type="number" min="0" name="agents" required />
+          <label for="logEffortLender">Sent to Lender</label>
+          <input id="logEffortLender" type="number" min="0" name="lender" required />
         </div>
         <menu>
           <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
@@ -143,9 +163,12 @@
     <dialog id="teamRecordDialog" class="modal">
       <form id="teamRecordForm">
         <h3 id="teamRecordDialogTitle">Add Team Record</h3>
-        <label>Originator Name<input name="originatorName" required maxlength="60" /></label>
-        <label>Record Broke<input name="recordBroke" required maxlength="120" /></label>
-        <label>Record #<input type="number" min="0" step="1" name="recordNumber" required /></label>
+        <label for="teamRecordOriginatorName">Originator Name</label>
+        <input id="teamRecordOriginatorName" name="originatorName" required maxlength="60" />
+        <label for="teamRecordBroke">Record Broke</label>
+        <input id="teamRecordBroke" name="recordBroke" required maxlength="120" />
+        <label for="teamRecordNumber">Record #</label>
+        <input id="teamRecordNumber" type="number" min="0" step="1" name="recordNumber" required />
         <menu>
           <button value="cancel" formmethod="dialog" class="ghost-btn">Cancel</button>
           <button class="primary-btn" type="submit">Save record</button>
